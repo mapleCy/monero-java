@@ -278,7 +278,7 @@ public class TestMoneroDaemonRpc {
     org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
     
     // set number of blocks to test
-    int numBlocks = 200;
+    int numBlocks = 100;
     
     // select random heights  // TODO: this is horribly inefficient way of computing last 100 blocks if not shuffling
     long currentHeight = daemon.getHeight();
