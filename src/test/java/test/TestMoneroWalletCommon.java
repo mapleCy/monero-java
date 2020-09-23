@@ -49,6 +49,8 @@ import monero.wallet.model.MoneroDestination;
 import monero.wallet.model.MoneroIncomingTransfer;
 import monero.wallet.model.MoneroIntegratedAddress;
 import monero.wallet.model.MoneroKeyImageImportResult;
+import monero.wallet.model.MoneroMessageSignatureResult;
+import monero.wallet.model.MoneroMessageSignatureType;
 import monero.wallet.model.MoneroMultisigInfo;
 import monero.wallet.model.MoneroMultisigInitResult;
 import monero.wallet.model.MoneroMultisigSignResult;
@@ -2270,12 +2272,59 @@ public abstract class TestMoneroWalletCommon {
   @Test
   public void testSignAndVerifyMessages() {
     org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    
+    // message to sign and subaddresses to test
     String msg = "This is a super important message which needs to be signed and verified.";
-    String signature = wallet.signMessage(msg);
-    boolean verified = wallet.verifyMessage(msg, wallet.getAddress(0, 0), signature);
-    assertEquals(true, verified);
-    verified = wallet.verifyMessage(msg, TestUtils.getExternalWalletAddress(), signature);
-    assertEquals(false, verified);
+    List<MoneroSubaddress> subaddresses = Arrays.asList(new MoneroSubaddress(0, 0), new MoneroSubaddress(0, 1), new MoneroSubaddress(1, 0));
+    
+    // test signing message with subaddresses
+    for (MoneroSubaddress subaddress : subaddresses) {
+      
+      // test signing with spend key if wallet is not view-only
+      if (!wallet.isViewOnly()) {
+        
+        // sign and verify message with spend key
+        String signature = wallet.signMessage(msg, MoneroMessageSignatureType.SIGN_WITH_SPEND_KEY, subaddress.getAccountIndex(), subaddress.getIndex());
+        MoneroMessageSignatureResult result = wallet.verifyMessage(msg, wallet.getAddress(subaddress.getAccountIndex(), subaddress.getIndex()), signature);
+        assertEquals(new MoneroMessageSignatureResult(true, false, MoneroMessageSignatureType.SIGN_WITH_SPEND_KEY, 2), result);
+        
+        // verify message with incorrect address
+        result = wallet.verifyMessage(msg, wallet.getAddress(0, 2), signature);
+        assertEquals(new MoneroMessageSignatureResult(false, null, null, null), result);
+        
+        // verify message with invalid address
+        try {
+          result = wallet.verifyMessage(msg, "invalid address", signature);
+          fail("Should have thrown error validating message with invalid address");
+        } catch (MoneroError err) {
+          assertEquals("Invalid address", err.getMessage());
+        }
+      } else {
+        try {
+          wallet.signMessage(msg, MoneroMessageSignatureType.SIGN_WITH_SPEND_KEY, subaddress.getAccountIndex(), subaddress.getIndex());
+          fail("Should have thrown error signing with spend key in view-only wallet");
+        } catch (MoneroError err) {
+          assertEquals("Cannot sign message with spend key because wallet is view-only", err.getMessage());
+        }
+      }
+      
+      // sign and verify message with view key
+      String signature = wallet.signMessage(msg, MoneroMessageSignatureType.SIGN_WITH_VIEW_KEY, subaddress.getAccountIndex(), subaddress.getIndex());
+      MoneroMessageSignatureResult result = wallet.verifyMessage(msg, wallet.getAddress(subaddress.getAccountIndex(), subaddress.getIndex()), signature);
+      assertEquals(new MoneroMessageSignatureResult(true, false, MoneroMessageSignatureType.SIGN_WITH_VIEW_KEY, 2), result);
+      
+      // verify message with incorrect address
+      result = wallet.verifyMessage(msg, wallet.getAddress(0, 2), signature);
+      assertEquals(new MoneroMessageSignatureResult(false, null, null, null), result);
+      
+      // verify message with invalid address
+      try {
+        result = wallet.verifyMessage(msg, "invalid address", signature);
+        fail("Should have thrown error validating message with invalid address");
+      } catch (MoneroError err) {
+        assertEquals("Invalid address", err.getMessage());
+      }
+    }
   }
   
   // Has an address book

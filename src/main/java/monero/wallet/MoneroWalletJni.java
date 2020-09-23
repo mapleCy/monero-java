@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import common.utils.GenUtils;
 import common.utils.JsonUtils;
@@ -53,6 +54,8 @@ import monero.wallet.model.MoneroCheckTx;
 import monero.wallet.model.MoneroIncomingTransfer;
 import monero.wallet.model.MoneroIntegratedAddress;
 import monero.wallet.model.MoneroKeyImageImportResult;
+import monero.wallet.model.MoneroMessageSignatureResult;
+import monero.wallet.model.MoneroMessageSignatureType;
 import monero.wallet.model.MoneroMultisigInfo;
 import monero.wallet.model.MoneroMultisigInitResult;
 import monero.wallet.model.MoneroMultisigSignResult;
@@ -1097,15 +1100,26 @@ public class MoneroWalletJni extends MoneroWalletBase {
   }
 
   @Override
-  public String signMessage(String msg) {
+  public String signMessage(String msg, MoneroMessageSignatureType signatureType, int accountIdx, int subaddressIdx) {
     assertNotClosed();
-    return signMessageJni(msg);
+    return signMessageJni(msg, signatureType.ordinal(), accountIdx, subaddressIdx);
   }
 
   @Override
-  public boolean verifyMessage(String msg, String address, String signature) {
+  public MoneroMessageSignatureResult verifyMessage(String msg, String address, String signature) {
     assertNotClosed();
-    return verifyMessageJni(msg, address, signature);
+    try {
+      String resultJson = verifyMessageJni(msg, address, signature);
+      Map<String, Object> result = JsonUtils.deserialize(resultJson, new TypeReference<Map<String, Object>>(){});
+      boolean isGood = (boolean) result.get("isGood");
+      return new MoneroMessageSignatureResult(
+          isGood,
+          isGood ? (boolean) result.get("isOld") : null,
+          isGood ? (0 == (int) result.get("signatureType") ? MoneroMessageSignatureType.SIGN_WITH_SPEND_KEY : MoneroMessageSignatureType.SIGN_WITH_VIEW_KEY) : null,
+          isGood ? (int) result.get("version") : null);
+    } catch (Exception e) {
+      throw new MoneroError(e.getMessage());
+    }
   }
 
   @Override
@@ -1469,9 +1483,9 @@ public class MoneroWalletJni extends MoneroWalletBase {
   
   private native void setTxNotesJni(String[] txHashes, String[] notes);
   
-  private native String signMessageJni(String msg);
+  private native String signMessageJni(String msg, int signatureType, int accountIdx, int subaddressIdx);
   
-  private native boolean verifyMessageJni(String msg, String address, String signature);
+  private native String verifyMessageJni(String msg, String address, String signature);
   
   private native String getTxKeyJni(String txHash);
   
