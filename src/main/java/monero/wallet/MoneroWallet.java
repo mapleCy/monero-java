@@ -922,9 +922,9 @@ public interface MoneroWallet {
    * Sign a message.
    * 
    * @param msg - the message to sign
-   * @param signature_type - sign with spend key or spend key
-   * @param account_idx - the account index of the message signature (default 0)
-   * @param subaddress_idx - the subaddress index of the message signature (default 0)
+   * @param signatureType - sign with spend key or view key
+   * @param accountIdx - the account index of the message signature (default 0)
+   * @param subaddressIdx - the subaddress index of the message signature (default 0)
    * @return the signature
    */
   public String signMessage(String message, MoneroMessageSignatureType signatureType, int accountIdx, int subaddressIdx);

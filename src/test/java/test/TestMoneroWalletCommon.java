@@ -2294,6 +2294,10 @@ public abstract class TestMoneroWalletCommon {
       result = wallet.verifyMessage(msg, "invalid address", signature);
       assertEquals(new MoneroMessageSignatureResult(false, null, null, null), result);
       
+      // verify message with external address
+      result = wallet.verifyMessage(msg, TestUtils.getExternalWalletAddress(), signature);
+      assertEquals(new MoneroMessageSignatureResult(false, null, null, null), result);
+      
       // sign and verify message with view key
       signature = wallet.signMessage(msg, MoneroMessageSignatureType.SIGN_WITH_VIEW_KEY, subaddress.getAccountIndex(), subaddress.getIndex());
       result = wallet.verifyMessage(msg, wallet.getAddress(subaddress.getAccountIndex(), subaddress.getIndex()), signature);
@@ -2301,6 +2305,10 @@ public abstract class TestMoneroWalletCommon {
       
       // verify message with incorrect address
       result = wallet.verifyMessage(msg, wallet.getAddress(0, 2), signature);
+      assertEquals(new MoneroMessageSignatureResult(false, null, null, null), result);
+      
+      // verify message with external address
+      result = wallet.verifyMessage(msg, TestUtils.getExternalWalletAddress(), signature);
       assertEquals(new MoneroMessageSignatureResult(false, null, null, null), result);
       
       // verify message with invalid address

@@ -1115,7 +1115,7 @@ public class MoneroWalletJni extends MoneroWalletBase {
       return new MoneroMessageSignatureResult(
           isGood,
           !isGood ? null : (Boolean) result.get("isOld"),
-          !isGood ? null : 0 == (int) result.get("signatureType") ? MoneroMessageSignatureType.SIGN_WITH_SPEND_KEY : MoneroMessageSignatureType.SIGN_WITH_VIEW_KEY,
+          !isGood ? null : "spend".equals(result.get("signatureType")) ? MoneroMessageSignatureType.SIGN_WITH_SPEND_KEY : MoneroMessageSignatureType.SIGN_WITH_VIEW_KEY,
           !isGood ? null : (Integer) result.get("version"));
     } catch (Exception e) {
       return new MoneroMessageSignatureResult(false, null, null, null); // jni can differentiate incorrect from invalid address, but rpc returns -2 for both, so returning bad result for consistency
