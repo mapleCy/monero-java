@@ -3435,12 +3435,12 @@ public abstract class TestMoneroWalletCommon {
         }
         curWallet.close(true);
         
-        System.out.println("Sending funds from main wallet");
         
         // send funds from the main test wallet to destinations in the first multisig wallet
         curWallet = getTestWallet();  // get / open the main test wallet
         assertEquals(BEGIN_MULTISIG_NAME, curWallet.getAttribute("name"));
         assertTrue(curWallet.getBalance().compareTo(BigInteger.valueOf(0)) > 0);
+        System.out.println("Sending funds from main wallet");
         curWallet.createTx(new MoneroTxConfig().setAccountIndex(0).setDestinations(destinations).setRelay(true));
         String returnAddress = curWallet.getPrimaryAddress(); // funds will be returned to this address from the multisig wallet
         
@@ -3502,7 +3502,7 @@ public abstract class TestMoneroWalletCommon {
         
         // attempt creating and relaying transaction without synchronizing with participants
         try {
-          curWallet.createTx(new MoneroTxConfig().setAccountIndex(1).setAddress(returnAddress).setAmount(TestUtils.MAX_FEE.multiply(BigInteger.valueOf(3)))).getTxSet();
+          curWallet.createTxs(new MoneroTxConfig().setAccountIndex(1).setAddress(returnAddress).setAmount(TestUtils.MAX_FEE.multiply(BigInteger.valueOf(3))));
           throw new RuntimeException("Should have failed sending funds without synchronizing with peers");
         } catch (MoneroError e) {
           assertEquals("No transaction created", e.getMessage());
@@ -3671,8 +3671,8 @@ public abstract class TestMoneroWalletCommon {
       List<String> peerMultisigHexes = new ArrayList<String>();
       for (int j = 0; j < walletIds.size(); j++) if (j != i) peerMultisigHexes.add(multisigHexes.get(j));
       MoneroWallet wallet = openWallet(walletIds.get(i));
+      wallet.sync();  // TODO monero-core: creating multisig tx fails if wallet not explicitly synced before import_multisig_hex: https://github.com/monero-project/monero/issues/6850
       wallet.importMultisigHex(peerMultisigHexes);
-      wallet.sync();
       wallet.close(true);
     }
     
