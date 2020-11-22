@@ -486,7 +486,7 @@ public class MoneroTx {
     this.setPaymentId(GenUtils.reconcile(this.getPaymentId(), tx.getPaymentId()));
     this.setFee(GenUtils.reconcile(this.getFee(), tx.getFee()));
     this.setRingSize(GenUtils.reconcile(this.getRingSize(), tx.getRingSize()));
-    this.setIsConfirmed(GenUtils.reconcile(this.isConfirmed(), tx.isConfirmed(), null, true, null));
+    this.setIsConfirmed(GenUtils.reconcile(this.isConfirmed(), tx.isConfirmed(), null, true, null));  // tx can become confirmed
     this.setIsMinerTx(GenUtils.reconcile(this.isMinerTx(), tx.isMinerTx(), null, null, null));
     this.setRelay(GenUtils.reconcile(this.getRelay(), tx.getRelay(), null, true, null));        // tx can become relayed
     this.setIsRelayed(GenUtils.reconcile(this.isRelayed(), tx.isRelayed(), null, true, null));  // tx can become relayed

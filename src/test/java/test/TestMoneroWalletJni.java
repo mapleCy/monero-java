@@ -16,7 +16,6 @@ import monero.common.MoneroError;
 import monero.common.MoneroRpcConnection;
 import monero.common.MoneroUtils;
 import monero.daemon.model.MoneroKeyImage;
-import monero.daemon.model.MoneroMiningStatus;
 import monero.daemon.model.MoneroNetworkType;
 import monero.wallet.MoneroWallet;
 import monero.wallet.MoneroWalletJni;
@@ -585,14 +584,11 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
         
         // attempt to start mining to push the network along  // TODO: TestUtils.tryStartMining() : reqId, TestUtils.tryStopMining(reqId)
         boolean startedMining = false;
-        MoneroMiningStatus miningStatus = daemon.getMiningStatus();
-        if (!miningStatus.isActive()) {
-          try {
-            wallet.startMining(7l, false, true);
-            startedMining = true;
-          } catch (Exception e) {
-            // no problem
-          }
+        try {
+          StartMining.startMining();
+          startedMining = true;
+        } catch (Exception e) {
+          // no problem
         }
         
         try {
@@ -1334,7 +1330,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
       assertNotNull(prevOutputReceived);
       assertNotNull(prevOutputSpent);
       BigInteger balance = incomingTotal.subtract(outgoingTotal);
-      assertEquals(balance, wallet.getBalance());
+      assertEquals(balance, wallet.getBalance()); // TODO (monero-core): balance does not equal notified outputs if unconfirmed outgoing transfer because wallet2 does not notify on_unconfirmed_money_spent(): https://github.com/monero-project/monero/issues/7035.  also unconfirmed outputs not present on wallet txs
       assertEquals(wallet.getBalance(), prevBalance);
       assertEquals(wallet.getUnlockedBalance(), prevUnlockedBalance);
     }
