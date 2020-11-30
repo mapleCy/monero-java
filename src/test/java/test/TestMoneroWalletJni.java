@@ -1,11 +1,12 @@
 package test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -30,9 +31,9 @@ import monero.wallet.model.MoneroTransferQuery;
 import monero.wallet.model.MoneroTxWallet;
 import monero.wallet.model.MoneroWalletConfig;
 import monero.wallet.model.MoneroWalletListener;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import utils.StartMining;
 import utils.TestUtils;
 import utils.WalletEqualityUtils;
@@ -50,7 +51,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
     this.wallet = (MoneroWalletJni) super.wallet;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     //Assume.assumeTrue(false); // ignore entire class
   }
@@ -103,6 +104,11 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   }
   
   @Override
+  public void closeWallet(MoneroWallet wallet, boolean save) {
+    wallet.close(save);
+  }
+  
+  @Override
   protected List<String> getMnemonicLanguages() {
     return MoneroWalletJni.getMnemonicLanguages();
   }
@@ -112,7 +118,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   /**
    * This test demonstrates that importing key images erases incoming transfers.
    */
-  @Ignore // TODO monero-core: fix this https://github.com/monero-project/monero/issues/5812
+  @Disabled // TODO monero-core: fix this https://github.com/monero-project/monero/issues/5812
   @Test
   public void testImportKeyImagesAndTransfers() {
     MoneroWalletJni wallet = null; // create a wallet for this test since it becomes corrupt TODO: use common wallet and move to common tests when fixed
@@ -150,7 +156,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
    * syncing, have registered listeners, and which are not closed.
    */
   @Test
-  @Ignore // TODO monero core: disabled because observing memory leak behavior when all tests run together
+  @Disabled // TODO monero core: disabled because observing memory leak behavior when all tests run together
   public void testCreateWalletsWithoutClose() {
     
     // lets make some wallets and then go away
@@ -186,7 +192,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can get the daemon's height
   @Test
   public void testDaemon() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
     assertTrue(wallet.isConnected());
     long daemonHeight = wallet.getDaemonHeight();
     assertTrue(daemonHeight > 0);
@@ -195,7 +201,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can get the daemon's max peer height
   @Test
   public void testGetDaemonMaxPeerHeight() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
     long height = wallet.getDaemonMaxPeerHeight();
     assertTrue(height > 0);
   }
@@ -252,7 +258,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can create a random JNI wallet
   @Test
   public void testCreateWalletRandomJni() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
 
     // create random wallet with defaults
     String path = getRandomWalletPath();
@@ -304,7 +310,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can create a JNI wallet from mnemonic
   @Test
   public void testCreateWalletFromMnemonicJni() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
     
     // create unconnected wallet with mnemonic
     String path = getRandomWalletPath();
@@ -381,7 +387,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can create a JNI wallet from keys
   @Test
   public void testCreateWalletFromKeysJni() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
     
     // recreate test wallet from keys
     String path = getRandomWalletPath();
@@ -403,7 +409,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   
   // Can re-sync an existing wallet from scratch
   @Test
-  @Ignore // TODO monero core: cannot re-sync from lower block height after wallet saved
+  @Disabled // TODO monero core: cannot re-sync from lower block height after wallet saved
   public void testResyncExisting() {
     assertTrue(MoneroWalletJni.walletExists(TestUtils.WALLET_JNI_PATH));
     MoneroWalletJni wallet = openWallet(new MoneroWalletConfig().setPath(TestUtils.WALLET_JNI_PATH).setServerUri(""), false);
@@ -427,8 +433,8 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can sync a wallet with a randomly generated seed
   @Test
   public void testSyncRandom() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
-    assertTrue("Not connected to daemon", daemon.isConnected());
+    assumeTrue(TEST_NON_RELAYS);
+    assertTrue(daemon.isConnected(), "Not connected to daemon");
 
     // create test wallet
     MoneroWalletJni wallet = createWallet(new MoneroWalletConfig(), false);
@@ -485,41 +491,41 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can sync a wallet created from mnemonic from the genesis
   @Test
   public void testSyncMnemonicFromGenesis() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS && !LITE_MODE);
+    assumeTrue(TEST_NON_RELAYS && !LITE_MODE);
     testSyncMnemonic(null, null, true, false);
   }
   
   // Can sync a wallet created from mnemonic from a restore height
   @Test
   public void testSyncMnemonicFromRestoreHeight() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
     testSyncMnemonic(null, TestUtils.FIRST_RECEIVE_HEIGHT);
   }
   
   // Can sync a wallet created from mnemonic from a start height
   @Test
   public void testSyncMnemonicFromStartHeight() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS && !LITE_MODE);
+    assumeTrue(TEST_NON_RELAYS && !LITE_MODE);
     testSyncMnemonic(TestUtils.FIRST_RECEIVE_HEIGHT, null, false, true);
   }
   
   // Can sync a wallet created from mnemonic from a start height less than the restore height
   @Test
   public void testSyncMnemonicStartHeightLTRestoreHeight() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS && !LITE_MODE);
+    assumeTrue(TEST_NON_RELAYS && !LITE_MODE);
     testSyncMnemonic(TestUtils.FIRST_RECEIVE_HEIGHT, TestUtils.FIRST_RECEIVE_HEIGHT + 3l);
   }
   
   // Can sync a wallet created from mnemonic from a start height greater than the restore height
   @Test
   public void testSyncMnemonicStartHeightGTRestoreHeight() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS && !LITE_MODE);
+    assumeTrue(TEST_NON_RELAYS && !LITE_MODE);
     testSyncMnemonic(TestUtils.FIRST_RECEIVE_HEIGHT + 3l, TestUtils.FIRST_RECEIVE_HEIGHT);
   }
   
   private void testSyncMnemonic(Long startHeight, Long restoreHeight) { testSyncMnemonic(startHeight, restoreHeight, false, false); }
   private void testSyncMnemonic(Long startHeight, Long restoreHeight, boolean skipGtComparison, boolean testPostSyncNotifications) {
-    assertTrue("Not connected to daemon", daemon.isConnected());
+    assertTrue(daemon.isConnected(), "Not connected to daemon");
     if (startHeight != null && restoreHeight != null) assertTrue(startHeight <= TestUtils.FIRST_RECEIVE_HEIGHT || restoreHeight <= TestUtils.FIRST_RECEIVE_HEIGHT);
     
     // create wallet from mnemonic
@@ -558,7 +564,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
       assertEquals(wallet.getDaemonHeight() - startHeightExpected, (long) result.getNumBlocksFetched());
       assertTrue(result.getReceivedMoney());
       if (wallet.getHeight() != daemon.getHeight()) System.out.println("WARNING: wallet height " + wallet.getHeight() + " is not synced with daemon height " + daemon.getHeight());  // TODO: height may not be same after long sync
-      assertEquals("Daemon heights are not equal: " + wallet.getDaemonHeight() + " vs " + daemon.getHeight(), daemon.getHeight(), wallet.getDaemonHeight());
+      assertEquals(daemon.getHeight(), wallet.getDaemonHeight(), "Daemon heights are not equal: " + wallet.getDaemonHeight() + " vs " + daemon.getHeight());
       if (startHeightExpected > TestUtils.FIRST_RECEIVE_HEIGHT) assertTrue(wallet.getTxs().get(0).getHeight() > TestUtils.FIRST_RECEIVE_HEIGHT);  // wallet is partially synced so first tx happens after true restore height
       else assertEquals(TestUtils.FIRST_RECEIVE_HEIGHT, (long) wallet.getTxs().get(0).getHeight());  // wallet should be fully synced so first tx happens on true restore height
       
@@ -621,7 +627,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can sync a wallet created from keys
   @Test
   public void testSyncWalletFromKeys() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
     
     // recreate test wallet from keys
     String path = getRandomWalletPath();
@@ -677,7 +683,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can start and stop syncing
   @Test
   public void testStartStopSyncing() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
     
     // test unconnected wallet
     String path = getRandomWalletPath();
@@ -821,7 +827,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can be saved
   @Test
   public void testSave() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
     
     // create unique path for new test wallet
     String path = getRandomWalletPath();
@@ -914,7 +920,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // TODO: update to be consistent with monero-javascript, file issues with wallet2 store_to()
   @Test
   public void testMoveTo() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
     
     // create unique name for test wallet
     String walletName = "test_wallet_" + System.currentTimeMillis();
@@ -965,7 +971,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
 //  // Can save the wallet
 //  @Test
 //  public void testSave() {
-//    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+//    assumeTrue(TEST_NON_RELAYS);
 //    
 //    // create unique path for new test wallet
 //    String path = TestUtils.TEST_WALLETS_DIR + "/test_wallet_" + UUID.randomUUID().toString();
@@ -1046,7 +1052,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   // Can be closed
   @Test
   public void testClose() {
-    org.junit.Assume.assumeTrue(TEST_NON_RELAYS);
+    assumeTrue(TEST_NON_RELAYS);
     
     // create a test wallet
     String path = getRandomWalletPath();
@@ -1183,7 +1189,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
       
       // registered wallet listeners will continue to get sync notifications after the wallet's initial sync
       if (isDone) {
-        assertTrue("Listener has completed and is not registered so should not be called again", wallet.getListeners().contains(this));
+        assertTrue(wallet.getListeners().contains(this), "Listener has completed and is not registered so should not be called again");
         onSyncProgressAfterDone = true;
       }
       
@@ -1196,7 +1202,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
       // otherwise start height is equal to previous completion height
       else if (prevCompleteHeight != null) assertEquals((long) prevCompleteHeight, startHeight);
       
-      assertTrue("end height > start height", endHeight > startHeight);
+      assertTrue(endHeight > startHeight, "end height > start height");
       assertEquals(this.startHeight, startHeight);
       assertTrue(endHeight >= prevEndHeight);  // chain can grow while syncing
       prevEndHeight = endHeight;
@@ -1255,7 +1261,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
     @Override
     public void onNewBlock(long height) {
       if (isDone) {
-        assertTrue("Listener has completed and is not registered so should not be called again", wallet.getListeners().contains(this));
+        assertTrue(wallet.getListeners().contains(this), "Listener has completed and is not registered so should not be called again");
         onNewBlockAfterDone = true;
       }
       if (walletTesterPrevHeight != null) assertEquals(walletTesterPrevHeight + 1, height);
@@ -1391,478 +1397,483 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
     super.testGetPath();
   }
 
-  @Override
+  @Test
   public void testGetHeight() {
     super.testGetHeight();
   }
 
-  @Override
+  @Test
   public void testGetHeightByDate() {
     super.testGetHeightByDate();
   }
 
-  @Override
+  @Test
   public void testGetMnemonic() {
     super.testGetMnemonic();
   }
 
-  @Override
+  @Test
   public void testGetMnemonicLanguages() {
     super.testGetMnemonicLanguages();
   }
 
-  @Override
+  @Test
   public void testGetPrivateViewKey() {
     super.testGetPrivateViewKey();
   }
   
-  @Override
+  @Test
   public void testGetPrivateSpendKey() {
     super.testGetPrivateSpendKey();
   }
   
-  @Override
+  @Test
   public void testGetPublicViewKey() {
     super.testGetPublicViewKey();
   }
   
-  @Override
+  @Test
   public void testGetPublicSpendKey() {
     super.testGetPublicSpendKey();
   }
 
-  @Override
+  @Test
   public void testGetPrimaryAddress() {
     super.testGetPrimaryAddress();
   }
 
-  @Override
+  @Test
   public void testGetIntegratedAddressFromPaymentId() {
     super.testGetIntegratedAddressFromPaymentId();
   }
 
-  @Override
+  @Test
   public void testDecodeIntegratedAddress() {
     super.testDecodeIntegratedAddress();
   }
 
-  @Override
+  @Test
   public void testSyncWithoutProgress() {
     super.testSyncWithoutProgress();
   }
   
-  @Override
+  @Test
   public void testWalletEqualityGroundTruth() {
     super.testWalletEqualityGroundTruth();
   }
 
-  @Override
+  @Test
   public void testGetAccountsWithoutSubaddresses() {
     super.testGetAccountsWithoutSubaddresses();
   }
 
-  @Override
+  @Test
   public void testGetAccountsWithSubaddresses() {
     super.testGetAccountsWithSubaddresses();
   }
 
-  @Override
+  @Test
   public void testGetAccount() {
     super.testGetAccount();
   }
 
-  @Override
+  @Test
   public void testCreateAccountWithoutLabel() {
     super.testCreateAccountWithoutLabel();
   }
 
-  @Override
+  @Test
   public void testCreateAccountWithLabel() {
     super.testCreateAccountWithLabel();
   }
 
-  @Override
+  @Test
   public void testGetSubaddresses() {
     super.testGetSubaddresses();
   }
 
-  @Override
+  @Test
   public void testGetSubaddressesByIndices() {
     super.testGetSubaddressesByIndices();
   }
 
-  @Override
+  @Test
   public void testGetSubaddressByIndex() {
     super.testGetSubaddressByIndex();
   }
 
-  @Override
+  @Test
   public void testCreateSubaddress() {
     super.testCreateSubaddress();
   }
 
-  @Override
+  @Test
   public void testGetSubaddressAddress() {
     super.testGetSubaddressAddress();
   }
 
-  @Override
+  @Test
   public void testGetAddressIndices() {
     super.testGetAddressIndices();
   }
 
-  @Override
+  @Test
   public void testGetAllBalances() {
     super.testGetAllBalances();
   }
 
-  @Override
+  @Test
   public void testGetTxsWallet() {
     super.testGetTxsWallet();
   }
 
-  @Override
+  @Test
   public void testGetTxsByHash() {
     super.testGetTxsByHash();
   }
 
-  @Override
+  @Test
   public void testGetTxsWithQuery() {
     super.testGetTxsWithQuery();
   }
   
-  @Override
+  @Test
   public void testGetTxsByHeight() {
     super.testGetTxsByHeight();
   }
 
-  @Override
+  @Test
   public void testGetTxsWithPaymentIds() {
     super.testGetTxsWithPaymentIds();
   }
 
-  @Override
+  @Test
   public void testGetTxsFieldsWithFiltering() {
     super.testGetTxsFieldsWithFiltering();
   }
 
-  @Override
+  @Test
   public void testGetTxsValidateInputs() {
     super.testGetTxsValidateInputs();
   }
 
-  @Override
+  @Test
   public void testGetTransfers() {
     super.testGetTransfers();
   }
 
-  @Override
+  @Test
   public void testGetTransfersWithQuery() {
     super.testGetTransfersWithQuery();
   }
 
-  @Override
+  @Test
   public void testGetTransfersValidateInputs() {
     super.testGetTransfersValidateInputs();
   }
   
-  @Override
+  @Test
   public void testGetIncomingOutgoingTransfers() {
     super.testGetIncomingOutgoingTransfers();
   }
 
-  @Override
+  @Test
   public void testGetOutputs() {
     super.testGetOutputs();
   }
 
-  @Override
+  @Test
   public void testGetOutputsWithQuery() {
     super.testGetOutputsWithQuery();
   }
 
-  @Override
+  @Test
   public void testGetOutputsValidateInputs() {
     super.testGetOutputsValidateInputs();
   }
 
-  @Override
+  @Test
   public void testAccounting() {
     super.testAccounting();
   }
 
-  @Override
+  @Test
   public void testCheckTxKey() {
     super.testCheckTxKey();
   }
 
-  @Override
+  @Test
   public void testCheckTxProof() {
     super.testCheckTxProof();
   }
 
-  @Override
+  @Test
   public void testCheckSpendProof() {
     super.testCheckSpendProof();
   }
 
-  @Override
+  @Test
   public void testGetReserveProofWallet() {
     super.testGetReserveProofWallet();
   }
 
-  @Override
+  @Test
   public void testGetReserveProofAccount() {
     super.testGetReserveProofAccount();
   }
 
-  @Override
+  @Test
   public void testSetTxNote() {
     super.testSetTxNote();
   }
 
-  @Override
+  @Test
   public void testSetTxNotes() {
     super.testSetTxNotes();
   }
 
-  @Override
+  @Test
   public void testGetOutputsHex() {
     super.testGetOutputsHex();
   }
 
-  @Override
+  @Test
   public void testImportOutputsHex() {
     super.testImportOutputsHex();
   }
 
-  @Override
+  @Test
   public void testGetSignedKeyImages() {
     super.testGetSignedKeyImages();
   }
 
-  @Override
+  @Test
   public void testGetNewKeyImagesFromLastImport() {
     super.testGetNewKeyImagesFromLastImport();
   }
 
-  @Override
+  @Test
   public void testImportKeyImages() {
     super.testImportKeyImages();
   }
   
-  @Override
+  @Test
   public void testViewOnlyAndOfflineWallets() {
     super.testViewOnlyAndOfflineWallets();
   }
 
-  @Override
+  @Test
   public void testSignAndVerifyMessages() {
     super.testSignAndVerifyMessages();
   }
   
-  @Override
+  @Test
   public void testAddressBook() {
     super.testAddressBook();
   }
 
-  @Override
+  @Test
   public void testSetAttributes() {
     super.testSetAttributes();
   }
 
-  @Override
+  @Test
   public void testCreatePaymentUri() {
     super.testCreatePaymentUri();
   }
 
-  @Override
+  @Test
   public void testMining() {
     super.testMining();
   }
   
-  @Override
+  @Test
   public void testSyncWithPoolSameAccounts() {
     super.testSyncWithPoolSameAccounts();
   }
   
-  @Override
+  @Test
   public void testSyncWithPoolSubmitAndDiscard() {
     super.testSyncWithPoolSubmitAndDiscard();
   }
   
-  @Override
+  @Test
   public void testSyncWithPoolSubmitAndRelay() {
     super.testSyncWithPoolSubmitAndRelay();
   }
   
-  @Override
+  @Test
   public void testSyncWithPoolRelay() {
     super.testSyncWithPoolRelay();
   }
   
-  @Override
+  @Test
   public void testSendToExternal() {
     super.testSendToExternal();
   }
 
-  @Override
+  @Test
   public void testSendFromSubaddresses() {
     super.testSendFromSubaddresses();
   }
   
-  @Override
+  @Test
   public void testSendFromSubaddressesSplit() {
     super.testSendFromSubaddressesSplit();
   }
 
-  @Override
+  @Test
   public void testSend() {
     super.testSend();
   }
 
-  @Override
+  @Test
   public void testSendWithPaymentId() {
     super.testSendWithPaymentId();
   }
 
-  @Override
+  @Test
   public void testSendSplit() {
     super.testSendSplit();
   }
 
-  @Override
+  @Test
   public void testCreateThenRelay() {
     super.testCreateThenRelay();
   }
 
-  @Override
+  @Test
   public void testCreateThenRelaySplit() {
     super.testCreateThenRelaySplit();
   }
 
-  @Override
+  @Test
   public void testSendToMultiple() {
     super.testSendToMultiple();
   }
 
-  @Override
+  @Test
   public void testSendToMultipleSplit() {
     super.testSendToMultipleSplit();
   }
 
-  @Override
+  @Test
   public void testSendDustToMultipleSplit() {
     super.testSendDustToMultipleSplit();
   }
 
-  @Override
+  @Test
   public void testUpdateLockedSameAccount() {
     super.testUpdateLockedSameAccount();
   }
 
-  @Override
+  @Test
   public void testUpdateLockedSameAccountSplit() {
     super.testUpdateLockedSameAccountSplit();
   }
 
-  @Override
+  @Test
   public void testUpdateLockedDifferentAccounts() {
     super.testUpdateLockedDifferentAccounts();
   }
 
-  @Override
+  @Test
   public void testUpdateLockedDifferentAccountsSplit() {
     super.testUpdateLockedDifferentAccountsSplit();
   }
 
-  @Override
+  @Test
   public void testSweepOutputs() {
     super.testSweepOutputs();
   }
 
-  @Override
+  @Test
   public void testSweepSubaddresses() {
     super.testSweepSubaddresses();
   }
 
-  @Override
+  @Test
   public void testSweepAccounts() {
     super.testSweepAccounts();
   }
 
-  @Override
+  @Test
   public void testSweepWalletByAccounts() {
     super.testSweepWalletByAccounts();
   }
 
-  @Override
+  @Test
   public void testSweepWalletBySubaddresses() {
     super.testSweepWalletBySubaddresses();
   }
 
-  @Override
+  @Test
   public void testSweepDustNoRelay() {
     super.testSweepDustNoRelay();
   }
 
-  @Override
+  @Test
   public void testSweepDust() {
     super.testSweepDust();
   }
 
-  @Override
+  @Test
   public void testRescanBlockchain() {
     super.testRescanBlockchain();
   }
   
-  @Override
+  @Test
   public void testMultisig() {
     super.testMultisig();
   }
   
-  @Override
+  @Test
   public void testSaveAndClose() {
     super.testSaveAndClose();
   }
   
-  @Override
+  @Test
   public void testOutputNotificationsSameAccounts() {
     super.testOutputNotificationsSameAccounts();
   }
   
-  @Override
+  @Test
   public void testOutputNotificationsDifferentAccounts() {
     super.testOutputNotificationsSameAccounts();
   }
   
-  @Override
+  @Test
   public void testOutputNotificationsSweepOutput() {
     super.testOutputNotificationsSweepOutput();
   }
   
-  @Override
+  @Test
   public void testStopListening() {
     super.testStopListening();
   }
   
-  @Override
+  @Test
   public void testReceivesFundsWithin10Seconds() {
     super.testReceivesFundsWithin10Seconds();
   }
   
-  @Override
+  @Test
   public void testReceivesFundsWithin10SecondsSameAccount() {
     super.testReceivesFundsWithin10SecondsSameAccount();
   }
   
-  @Override
+  @Test
   public void testReceivedOutputNotifications() {
     super.testReceivedOutputNotifications();
   }
   
-  @Override
+  @Test
   public void testReceivedOutputNotificationsWithUnlockHeight() {
     super.testReceivedOutputNotificationsWithUnlockHeight();
+  }
+  
+  @Test
+  public void testCreateAndReceive() {
+    super.testCreateAndReceive();
   }
 }

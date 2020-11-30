@@ -40,6 +40,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 import monero.common.MoneroError;
 import monero.common.MoneroRpcConnection;
@@ -79,6 +81,8 @@ import monero.wallet.model.MoneroTxSet;
 import monero.wallet.model.MoneroTxWallet;
 import monero.wallet.model.MoneroWalletConfig;
 import monero.wallet.model.MoneroWalletListenerI;
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
 /**
@@ -168,7 +172,7 @@ public class MoneroWalletRpc extends MoneroWalletBase {
                 BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 while ((line = in.readLine()) != null) System.out.println(line);
               } catch (IOException e) {
-                e.printStackTrace();
+                //e.printStackTrace();  // exception expected on close
               }
             }
           }).start();
@@ -209,9 +213,10 @@ public class MoneroWalletRpc extends MoneroWalletBase {
   /**
    * Stop the internal process running monero-wallet-rpc.
    */
-  public void stopProcess() {
+  public int stopProcess() throws InterruptedException {
     if (process == null) throw new MoneroError("MoneroWalletRpc instance not created from new process");
-    process.destroy();
+    process.destroyForcibly();  // TODO: why need to destroy forcibly?
+    return process.waitFor();
   }
   
   /**
@@ -675,12 +680,12 @@ public class MoneroWalletRpc extends MoneroWalletBase {
   
   @Override
   public void startSyncing() {
-    // nothing to do because wallet rpc syncs automatically
+    // nothing to do because wallet rpc syncs automatically // TODO: use wallet rpc `auto_refresh` command, support startSyncing(refreshRate)
   }
   
   @Override
   public void stopSyncing() {
-    throw new MoneroError("Monero Wallet RPC does not support the ability to stop syncing");
+    throw new MoneroError("Monero Wallet RPC does not support the ability to stop syncing");  // TODO: use wallet rpc `auto_refresh` command
   }
   
   @Override
@@ -1824,6 +1829,8 @@ public class MoneroWalletRpc extends MoneroWalletBase {
   // ------------------------------ PRIVATE -----------------------------------
   
   private void clear() {
+    listeners.clear();
+    setIsListening(false);
     addressCache.clear();
     path = null;
   }
@@ -2164,9 +2171,8 @@ public class MoneroWalletRpc extends MoneroWalletBase {
    * Enables or disables listening to ZMQ notifications from monero-wallet-rpc.
    */
   private void setIsListening(boolean isEnabled) {
-    System.out.println("setIsListening(" + isEnabled + ")");
     if (rpcListener == null && isEnabled) rpcListener = new WalletRpcListener();
-    rpcListener.setIsEnabled(isEnabled);
+    if (rpcListener != null) rpcListener.setIsEnabled(isEnabled);
   }
   
   /**
@@ -2175,8 +2181,9 @@ public class MoneroWalletRpc extends MoneroWalletBase {
   private class WalletRpcListener {
     
     private boolean isOpen;
-    private Thread thread;
-    private ZMQ.Context context;
+    private Thread pollThread;
+    private ExecutorService processNotificationPool;
+    private ZContext context;
     private ZMQ.Socket subscriber;
     private BigInteger prevBalance;
     private BigInteger prevUnlockedBalance;
@@ -2185,8 +2192,6 @@ public class MoneroWalletRpc extends MoneroWalletBase {
     public WalletRpcListener() {
       prevBalance = getBalance();
       prevUnlockedBalance = getUnlockedBalance();
-      context = ZMQ.context(1);
-      subscriber = context.socket(ZMQ.SUB); // TODO: use non-deprecated api
     }
     
     public void setIsEnabled(boolean isEnabled) {
@@ -2196,13 +2201,21 @@ public class MoneroWalletRpc extends MoneroWalletBase {
     
     private void open() {
       if (isOpen) return;
+      isOpen = true;
       
       // cache locked txs for later comparison
       checkForChangedUnlockedTxs(); 
       
+      // create pool to process notifications in serial without blocking polling
+      processNotificationPool = Executors.newFixedThreadPool(1);
+      
       // create thread which polls zmq publications
-      thread = new Thread(new Runnable() {
+      pollThread = new Thread(new Runnable() {
         public void run() {
+          
+          // create subscriber
+          context = new ZContext();
+          subscriber = context.createSocket(SocketType.SUB);
           
           // subscribe to topic
           subscriber.connect(getRpcConnection().getZmqUri());
@@ -2211,59 +2224,56 @@ public class MoneroWalletRpc extends MoneroWalletBase {
           subscriber.subscribe("json-full-money_spent".getBytes());
           subscriber.subscribe("json-full-unconfirmed_money_received".getBytes());
           
+          // TODO: refine topics
+          //subscriber.subscribe("json-full".getBytes());
+          //subscriber.subscribe("json-minimal".getBytes());
           
-          //json-full-money_received
-          //json-full-money_spent
-          //json-full-unconfirmed_money_received
-          
-          //subscriber.subscribe("json-full".getBytes()); // TODO: refine topics
-          //subscriber.subscribe("json-minimal".getBytes()); // TODO: refine topics
+          // TODO: the content of these are yet to to be decided, lets see how much we use full
+          //json-minimal-money_received
+          //json-minimal-money_spent
+          //json-minimal-unconfirmed_money_received
           
           // poll for zmq publications
-          ZMQ.Poller poller = context.poller(1);
+          ZMQ.Poller poller = context.createPoller(1);
           poller.register(subscriber, ZMQ.Poller.POLLIN);
-          while (!Thread.currentThread().isInterrupted()) {
+          while (!Thread.currentThread().isInterrupted() && isOpen) {
             try {
-              System.out.println("Polling...");
               poller.poll();
-              
-              // process notification in separate thread
               if (poller.pollin(0)) {
                 String notification = subscriber.recvStr();
-                new Thread(new Runnable() {
+                processNotificationPool.submit(new Runnable() {
                   @Override
                   public void run() {
                     processZmqPublication(notification);
                   }
-                }).start();
+                });
+              }
+            } catch (Exception e) {
+              if (!Thread.currentThread().isInterrupted() && isOpen) {
+                throw e;
               }
             }
-            catch (zmq.ZError.IOException e) { e.printStackTrace(); }  // exceptions expected when closed mid-poll
-            catch (java.nio.channels.ClosedSelectorException e2) { e2.printStackTrace(); }
           }
           
           // close if disconnects
           close();
         }
       });
-      thread.setDaemon(true);
-      thread.start();
-      isOpen = true;
+      pollThread.start();
     }
     
     private void close() {
       if (!isOpen) return;
+      isOpen = false;
       subscriber.close();
       context.close();
-      thread.interrupt();
       prevLockedTxHashes.clear();
-      isOpen = false;
+      processNotificationPool.shutdown();
+      pollThread.interrupt();
     }
     
     @SuppressWarnings("unchecked")
     private void processZmqPublication(String content) {
-      
-      System.out.println("Received zmq message: " + content);
       
       // parse json content to map
       // TODO: more efficent way?
@@ -2278,7 +2288,6 @@ public class MoneroWalletRpc extends MoneroWalletBase {
       if (topic.equals("json-minimal-chain_main")) {
         Map<String, Object> contentMap = JsonUtils.toMap(MoneroRpcConnection.MAPPER, content.substring(bodyIdx + 1)); // TODO: keep mapper in MoneroRpcConnection?
         long height = ((BigInteger) contentMap.get("first_height")).longValue();
-        System.out.println("Notifying listeners of height: " + height);
         onNewBlockMt(height);
         
         // notify if balances change
@@ -2318,7 +2327,6 @@ public class MoneroWalletRpc extends MoneroWalletBase {
         }
         
         // announce output
-        System.out.println("Parsed TX:\n\n" + tx);
         if (topic.equals("json-full-money_received")) {
           tx.setIsIncoming(true);
           prevLockedTxHashes.add(tx.getHash()); // watch for unlock
@@ -2335,11 +2343,6 @@ public class MoneroWalletRpc extends MoneroWalletBase {
           LOGGER.warning("Received unsupported notification: " + content);
         }
       }
-      
-      // TODO: the content of these are yet to to be decided, lets see how much we use full
-      //json-minimal-money_received
-      //json-minimal-money_spent
-      //json-minimal-unconfirmed_money_received
     }
     
     private void onNewBlockMt(long height) {

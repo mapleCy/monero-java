@@ -1,8 +1,8 @@
 package utils;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -160,7 +160,7 @@ public class WalletEqualityUtils {
           }
           
           // test tx equality by merging
-          assertTrue("Txs are not mergeable", TestUtils.txsMergeable(tx1, tx2));
+          assertTrue(TestUtils.txsMergeable(tx1, tx2), "Txs are not mergeable");
           assertEquals(tx1, tx2);
           found = true;
           

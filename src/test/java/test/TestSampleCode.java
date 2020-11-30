@@ -1,17 +1,12 @@
 package test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-
 import monero.common.MoneroRpcConnection;
 import monero.daemon.MoneroDaemon;
 import monero.daemon.MoneroDaemonRpc;
@@ -34,6 +29,9 @@ import monero.wallet.model.MoneroTxQuery;
 import monero.wallet.model.MoneroTxWallet;
 import monero.wallet.model.MoneroWalletConfig;
 import monero.wallet.model.MoneroWalletListener;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import utils.TestUtils;
 
 /**
@@ -43,7 +41,7 @@ public class TestSampleCode {
   
   private static boolean JNI_OUTPUT_RECEIVED = false;
   
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     
     // all wallets need to wait for txs to confirm to reliably sync
@@ -127,7 +125,7 @@ public class TestSampleCode {
   
   @SuppressWarnings("unused")
   @Test
-  @Ignore
+  @Disabled
   public void testSampleCodeLong() throws InterruptedException {
     
     // connect to a daemon

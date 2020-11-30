@@ -1,8 +1,8 @@
 package utils;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,8 +55,8 @@ public class TestUtils {
   public static final String WALLET_RPC_ZMQ_URI = "tcp://" + WALLET_RPC_ZMQ_DOMAIN + ":" + WALLET_RPC_ZMQ_PORT_START;
   public static final String WALLET_RPC_USERNAME = "rpc_user";
   public static final String WALLET_RPC_PASSWORD = "abc123";
-  public static final String WALLET_RPC_LOCAL_EXEC_PATH = "/Applications/monero-x86_64-apple-darwin11-v0.17.1.1-rct-zmq/monero-wallet-rpc"; // TODO: test error messages with invalid params, TODO: dummy path for public repo
-  public static final String WALLET_RPC_LOCAL_WALLET_DIR = "/Applications/monero-x86_64-apple-darwin11-v0.17.1.1-rct-zmq";  // defaults to exec path's parent directory
+  public static final String WALLET_RPC_LOCAL_EXEC_PATH = "/Applications/monero-x86_64-apple-darwin11-v0.17.1.5-rct-zmq/monero-wallet-rpc"; // TODO: test error messages with invalid params, TODO: dummy path for public repo
+  public static final String WALLET_RPC_LOCAL_WALLET_DIR = "/Applications/monero-x86_64-apple-darwin11-v0.17.1.5-rct-zmq";  // defaults to exec path's parent directory
   public static final String WALLET_RPC_ACCESS_CONTROL_ORIGINS = "http://localhost:8080"; // cors access from web browser
   
   // test wallet config
@@ -141,7 +141,7 @@ public class TestUtils {
   /**
    * Create a monero-wallet-rpc process bound to the next available ports.
    */
-  private static Map<MoneroWalletRpc, Integer> WALLET_PORT_OFFSETS = new HashMap<MoneroWalletRpc, Integer>();
+  public static Map<MoneroWalletRpc, Integer> WALLET_PORT_OFFSETS = new HashMap<MoneroWalletRpc, Integer>();
   public static MoneroWalletRpc startWalletRpcProcess() throws IOException {
     
     // get next available offset of ports to bind to
@@ -170,8 +170,9 @@ public class TestUtils {
    * Stop a monero-wallet-rpc process and release its ports.
    * 
    * @param walletRpc - wallet created with internal monero-wallet-rpc process
+   * @throws InterruptedException 
    */
-  public static void stopWalletRpcProcess(MoneroWalletRpc walletRpc) {
+  public static void stopWalletRpcProcess(MoneroWalletRpc walletRpc) throws InterruptedException {
     WALLET_PORT_OFFSETS.remove(walletRpc);
     walletRpc.stopProcess();
   }
@@ -232,6 +233,12 @@ public class TestUtils {
    * @return the created wallet
    */
   public static MoneroWalletJni createWalletGroundTruth(MoneroNetworkType networkType, String mnemonic, Long restoreHeight) {
+    
+    // create directory for test wallets if it doesn't exist
+    File testWalletsDir = new File(TestUtils.TEST_WALLETS_DIR);
+    if (!testWalletsDir.exists()) testWalletsDir.mkdirs();
+    
+    // create ground truth wallet
     MoneroRpcConnection daemonConnection = new MoneroRpcConnection(DAEMON_RPC_URI, DAEMON_RPC_USERNAME, DAEMON_RPC_PASSWORD);
     String path = TestUtils.TEST_WALLETS_DIR + "/gt_wallet_" + System.currentTimeMillis();
     MoneroWalletJni gtWallet = MoneroWalletJni.createWallet(new MoneroWalletConfig().setPath(path).setPassword(TestUtils.WALLET_PASSWORD).setNetworkType(networkType).setMnemonic(mnemonic).setServer(daemonConnection).setRestoreHeight(restoreHeight));
