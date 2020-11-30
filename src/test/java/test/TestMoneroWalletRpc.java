@@ -914,7 +914,7 @@ public class TestMoneroWalletRpc extends TestMoneroWalletCommon {
   
   @Test
   public void testOutputNotificationsDifferentAccounts() {
-    super.testOutputNotificationsSameAccounts();
+    super.testOutputNotificationsDifferentAccounts();
   }
   
   @Test
