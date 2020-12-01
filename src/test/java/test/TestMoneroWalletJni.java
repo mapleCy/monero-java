@@ -1839,7 +1839,7 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   
   @Test
   public void testOutputNotificationsDifferentAccounts() {
-    super.testOutputNotificationsSameAccounts();
+    super.testOutputNotificationsDifferentAccounts();
   }
   
   @Test
