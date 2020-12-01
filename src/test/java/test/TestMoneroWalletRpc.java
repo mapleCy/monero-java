@@ -728,6 +728,7 @@ public class TestMoneroWalletRpc extends TestMoneroWalletCommon {
   }
 
   @Test
+  @Disabled // TODO (monero-project): causing failures in ground truth and notification tests
   public void testImportKeyImages() {
     super.testImportKeyImages();
   }
