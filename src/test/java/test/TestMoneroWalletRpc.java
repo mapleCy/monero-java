@@ -728,7 +728,7 @@ public class TestMoneroWalletRpc extends TestMoneroWalletCommon {
   }
 
   @Test
-  @Disabled // TODO (monero-project): causing failures in ground truth and notification tests
+  @Disabled // TODO (monero-project): disabled because importing key images deletes corresponding incoming transfers: https://github.com/monero-project/monero/issues/5812
   public void testImportKeyImages() {
     super.testImportKeyImages();
   }
