@@ -34,6 +34,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Logger;
 import monero.common.MoneroError;
 import monero.common.MoneroRpcConnection;
@@ -1536,39 +1539,56 @@ public class MoneroWalletJni extends MoneroWalletBase {
   private class WalletJniListener {
     
     private MoneroWalletJni wallet; // wallet to notify listeners // TODO: can remove this and call getListeners() directly?
+    private ExecutorService processNotificationPool;
+    private ScheduledExecutorService announceNotificationPool;
     
     public WalletJniListener(MoneroWalletJni wallet) {  // TODO: make this MoneroWallet when all methods moved to top-level
       this.wallet = wallet;
+      processNotificationPool = Executors.newFixedThreadPool(1);
+      //announceNotificationPool = Executors.newCachedThreadPool();
+      announceNotificationPool = Executors.newScheduledThreadPool(20);
     }
     
     public void onSyncProgress(long height, long startHeight, long endHeight, double percentDone, String message) {
-      for (MoneroWalletListenerI listener : wallet.getListeners()) {
-        new Thread(new Runnable() {
-          @Override public void run() {
-            listener.onSyncProgress(height, startHeight, endHeight, percentDone, message);
+      processNotificationPool.submit(new Runnable() {
+        @Override public void run() {
+          for (MoneroWalletListenerI listener : wallet.getListeners()) {
+            announceNotificationPool.submit(new Runnable() {
+              @Override public void run() {
+                listener.onSyncProgress(height, startHeight, endHeight, percentDone, message);
+              }
+            });
           }
-        }).start();
-      }
+        }
+      });
     }
     
     public void onNewBlock(long height) {
-      for (MoneroWalletListenerI listener : wallet.getListeners()) {
-        new Thread(new Runnable() {
-          @Override public void run() {
-            listener.onNewBlock(height);
+      processNotificationPool.submit(new Runnable() {
+        @Override public void run() {
+          for (MoneroWalletListenerI listener : wallet.getListeners()) {
+            announceNotificationPool.submit(new Runnable() {
+              @Override public void run() {
+                listener.onNewBlock(height);
+              }
+            });
           }
-        }).start();
-      }
+        }
+      });
     }
     
     public void onBalancesChanged(String newBalanceStr, String newUnlockedBalanceStr) {
-      for (MoneroWalletListenerI listener : wallet.getListeners()) {
-        new Thread(new Runnable() {
-          @Override public void run() {
-            listener.onBalancesChanged(new BigInteger(newBalanceStr), new BigInteger(newUnlockedBalanceStr));
+      processNotificationPool.submit(new Runnable() {
+        @Override public void run() {
+          for (MoneroWalletListenerI listener : wallet.getListeners()) {
+            announceNotificationPool.submit(new Runnable() {
+              @Override public void run() {
+                listener.onBalancesChanged(new BigInteger(newBalanceStr), new BigInteger(newUnlockedBalanceStr));
+              }
+            });
           }
-        }).start();
-      }
+        }
+      });
     }
     
     public void onOutputReceived(long height, String txHash, String amountStr, int accountIdx, int subaddressIdx, int version, long unlockHeight, boolean isLocked) {
@@ -1599,13 +1619,17 @@ public class MoneroWalletJni extends MoneroWalletBase {
       }
       
       // announce output
-      for (MoneroWalletListenerI listener : wallet.getListeners()) {
-        new Thread(new Runnable() {
-          @Override public void run() {
-            listener.onOutputReceived((MoneroOutputWallet) tx.getOutputs().get(0));
+      processNotificationPool.submit(new Runnable() {
+        @Override public void run() {
+          for (MoneroWalletListenerI listener : wallet.getListeners()) {
+            announceNotificationPool.submit(new Runnable() {
+              @Override public void run() {
+                listener.onOutputReceived((MoneroOutputWallet) tx.getOutputs().get(0));
+              }
+            });
           }
-        }).start();
-      }
+        }
+      });
     }
     
     public void onOutputSpent(long height, String txHash, String amountStr, int accountIdx, int subaddressIdx, int version) {
@@ -1634,13 +1658,17 @@ public class MoneroWalletJni extends MoneroWalletBase {
       }
       
       // announce output
-      for (MoneroWalletListenerI listener : wallet.getListeners()) {
-        new Thread(new Runnable() {
-          @Override public void run() {
-            listener.onOutputSpent((MoneroOutputWallet) tx.getInputs().get(0));
+      processNotificationPool.submit(new Runnable() {
+        @Override public void run() {
+          for (MoneroWalletListenerI listener : wallet.getListeners()) {
+            announceNotificationPool.submit(new Runnable() {
+              @Override public void run() {
+                listener.onOutputSpent((MoneroOutputWallet) tx.getOutputs().get(0));
+              }
+            });
           }
-        }).start();
-      }
+        }
+      });
     }
   }
   

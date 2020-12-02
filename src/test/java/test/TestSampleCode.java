@@ -67,7 +67,7 @@ public class TestSampleCode {
     List<MoneroTx> txsInPool = daemon.getTxPool();          // get transactions in the pool
     
     // open wallet on monero-wallet-rpc
-    MoneroWalletRpc walletRpc = new MoneroWalletRpc("http://localhost:38083", "rpc_user", "abc123");
+    MoneroWalletRpc walletRpc = new MoneroWalletRpc(TestUtils.WALLET_RPC_URI, TestUtils.WALLET_RPC_USERNAME, TestUtils.WALLET_RPC_PASSWORD); // *** REPLACE WITH CONSTANTS IN README ***
     walletRpc.openWallet("test_wallet_1", "supersecretpassword123");  // *** CHANGE README TO "sample_wallet_rpc" ***
     String primaryAddress = walletRpc.getPrimaryAddress();  // 555zgduFhmKd2o8rPUz...
     BigInteger balance = walletRpc.getBalance();            // 533648366742

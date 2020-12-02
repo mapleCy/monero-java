@@ -4277,9 +4277,16 @@ public abstract class TestMoneroWalletCommon {
     
     // must receive outputs with known subaddresses and amounts
     for (int destinationAccount : destinationAccounts) {
-      if (!hasOutput(listener.getOutputsReceived(), destinationAccount, 0, sweepOutput ? null : TestUtils.MAX_FEE)) {
+      if (!hasOutput(listener.getOutputsReceived(), tx.getHash(), destinationAccount, 0, sweepOutput ? null : TestUtils.MAX_FEE)) {
+        System.out.println("We don't have the expected output to account " + destinationAccount + "!");
+        System.out.println("Whole TX");
+        System.out.println(wallet.getTx(tx.getHash()));
+        System.out.println("Received outputs TX");
+        System.out.println(listener.getOutputsReceived());
         errors.add("ERROR: missing expected received output to subaddress [" + destinationAccount + ", 0] of amount " + TestUtils.MAX_FEE);
         return errors;
+      } else {
+        System.out.println("Received expected output to subaddress [" + destinationAccount + ", 0] of amount " + TestUtils.MAX_FEE);
       }
     }
     
@@ -4327,8 +4334,8 @@ public abstract class TestMoneroWalletCommon {
     return sb.toString();
   }
   
-  private static boolean hasOutput(List<MoneroOutputWallet> outputs, int accountIdx, int subaddressIdx, BigInteger amount) { // TODO: use comon filter?
-    MoneroOutputQuery query = new MoneroOutputQuery().setAccountIndex(accountIdx).setSubaddressIndex(subaddressIdx).setAmount(amount);
+  private static boolean hasOutput(List<MoneroOutputWallet> outputs, String txHash, int accountIdx, int subaddressIdx, BigInteger amount) { // TODO: use comon filter?
+    MoneroOutputQuery query = new MoneroOutputQuery().setTxQuery(new MoneroTxQuery().setHash(txHash)).setAccountIndex(accountIdx).setSubaddressIndex(subaddressIdx).setAmount(amount);
     for (MoneroOutputWallet output : outputs) {
       if (query.meetsCriteria(output)) return true;
     }
@@ -4395,7 +4402,7 @@ public abstract class TestMoneroWalletCommon {
       try { TimeUnit.SECONDS.sleep(REFRESH_RATE); }   // TODO: monero-wallet-rpc has 20 second refresh rate by default
       catch (Exception e) { throw new RuntimeException(e); }
       receiver.getTx(txHash);
-      assertFalse(receiverListener.getOutputsReceived().isEmpty(), "No notification of received funds within 10 seconds in " + (sameAccount ? "same account" : "different wallets"));
+      assertFalse(receiverListener.getOutputsReceived().isEmpty(), "No notification of received funds within 10 seconds in " + (sameAccount ? "same account" : "different wallets")); // TODO (monero-project): notify of funds sent from/to same account with amount 0
       for (MoneroOutputWallet output : receiverListener.getOutputsReceived()) assertNotEquals(null, output.getTx().isConfirmed());
     } finally {
       sender.removeListener(senderListener);
@@ -4445,13 +4452,6 @@ public abstract class TestMoneroWalletCommon {
     MoneroSubmitTxResult result = daemon.submitTxHex(tx.getFullHex());
     assertTrue(result.isGood(), "Bad submit tx result: " + JsonUtils.serialize(result));
     
-    final int REFRESH_RATE = receiver instanceof MoneroWalletRpc ? 20 : 10; // TODO: wallet rpc default refresh rate is 20 seconds, bump it up to 10?
-    
-    // test notification of tx in pool within 10 seconds
-    try { TimeUnit.SECONDS.sleep(REFRESH_RATE); } catch (Exception e) { throw new RuntimeException(e); }
-    assertNotNull(listener.lastNotifiedOutput);
-    if (listener.lastOnNewBlockHeight == null || listener.lastOnNewBlockHeight < submitHeight) assertFalse(listener.lastNotifiedOutput.getTx().isConfirmed());
-    
     // listen for new blocks to test output notifications
     receiver.addListener(new MoneroWalletListener() {
       
@@ -4462,7 +4462,7 @@ public abstract class TestMoneroWalletCommon {
         try {
           
           // wait a moment for all notifications from last sync
-          TimeUnit.SECONDS.sleep(1);
+          TimeUnit.SECONDS.sleep(3);
           
           // first confirmation expected
           if (listener.confirmedHeight == null && Boolean.TRUE.equals(listener.lastNotifiedOutput.getTx().isConfirmed())) { // only run by first thread after confirmation
@@ -4494,6 +4494,12 @@ public abstract class TestMoneroWalletCommon {
         }
       }
     });
+    
+    // test notification of tx in pool within 10 seconds
+    final int REFRESH_RATE = receiver instanceof MoneroWalletRpc ? 20 : 10; // TODO: wallet rpc default refresh rate is 20 seconds, bump it up to 10?
+    try { TimeUnit.SECONDS.sleep(REFRESH_RATE); } catch (Exception e) { throw new RuntimeException(e); }
+    assertNotNull(listener.lastNotifiedOutput);
+    if (listener.lastOnNewBlockHeight == null || listener.lastOnNewBlockHeight < submitHeight) assertFalse(listener.lastNotifiedOutput.getTx().isConfirmed());
     
     // mine until complete
     StartMining.startMining();

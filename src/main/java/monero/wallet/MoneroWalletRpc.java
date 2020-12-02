@@ -121,9 +121,9 @@ public class MoneroWalletRpc extends MoneroWalletBase {
   /**
    * Create an internal process running monero-wallet-rpc and connect to it.
    * 
-   * Use `stopProcess()` to stop the newly created process. // TODO: use existing stop() instead?
+   * Use `stopProcess()` to stop the newly created process.
    * 
-   * @param cmd - path and arguments to external monero-wallet-rpc executable
+   * @param cmd - path then arguments to external monero-wallet-rpc executable
    * @throws IOException 
    */
   public MoneroWalletRpc(List<String> cmd) throws IOException {
@@ -2244,7 +2244,7 @@ public class MoneroWalletRpc extends MoneroWalletBase {
                 processNotificationPool.submit(new Runnable() {
                   @Override
                   public void run() {
-                    processZmqPublication(notification);
+                    processZmqNotification(notification);
                   }
                 });
               }
@@ -2273,7 +2273,9 @@ public class MoneroWalletRpc extends MoneroWalletBase {
     }
     
     @SuppressWarnings("unchecked")
-    private void processZmqPublication(String content) {
+    private void processZmqNotification(String content) {
+      
+      System.out.println("Processing zmq notification: " + content);
       
       // parse json content to map
       // TODO: more efficent way?
