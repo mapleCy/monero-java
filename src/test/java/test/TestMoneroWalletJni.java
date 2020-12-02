@@ -1174,7 +1174,6 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
     private Long prevCompleteHeight;
     protected boolean isDone;
     private Boolean onSyncProgressAfterDone;
-    private String uuid;
     
     public SyncProgressTester(MoneroWalletJni wallet, long startHeight, long endHeight) {
       this.wallet = wallet;
@@ -1183,13 +1182,11 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
       this.startHeight = startHeight;
       this.prevEndHeight = endHeight;
       this.isDone = false;
-      this.uuid = UUID.randomUUID().toString();
     }
     
     @Override
     public synchronized void onSyncProgress(long height, long startHeight, long endHeight, double percentDone, String message) {
       super.onSyncProgress(height, startHeight, endHeight, percentDone, message);
-      System.out.println("ON SYNC PROGRESS " + height + ", " + uuid);
       
       // registered wallet listeners will continue to get sync notifications after the wallet's initial sync
       if (isDone) {
@@ -1197,12 +1194,8 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
         onSyncProgressAfterDone = true;
       }
       
-      System.out.println("1" + ", " + uuid);
-      
       // update tester's start height if new sync session
       if (prevCompleteHeight != null && startHeight == prevCompleteHeight) this.startHeight = startHeight;
-      
-      System.out.println("2" + ", " + uuid);
       
       // if sync is complete, record completion height for subsequent start heights
       if (Double.compare(percentDone, 1) == 0) prevCompleteHeight = endHeight;
@@ -1210,40 +1203,22 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
       // otherwise start height is equal to previous completion height
       else if (prevCompleteHeight != null) assertEquals((long) prevCompleteHeight, startHeight);
       
-      System.out.println("4" + ", " + uuid);
-      
       assertTrue(endHeight > startHeight, "end height > start height");
       assertEquals(this.startHeight, startHeight);
       assertTrue(endHeight >= prevEndHeight);  // chain can grow while syncing
       prevEndHeight = endHeight;
       assertTrue(height >= startHeight);
       assertTrue(height < endHeight);
-      System.out.println("5" + ", " + uuid);
       double expectedPercentDone = (double) (height - startHeight + 1) / (double) (endHeight - startHeight);
-      System.out.println("5.1" + ", " + uuid);
       assertTrue(Double.compare(expectedPercentDone, percentDone) == 0);
-      System.out.println("5.2" + ", " + uuid);
-      if (prevHeight == null) {
-        System.out.println("5.3" + ", " + uuid);
-        System.out.println("Comparing " + startHeight + " and " + height + ", " + uuid);
-        assertEquals(startHeight, height);
-      }
-      else {
-        System.out.println("5.4" + ", " + uuid);
-        System.out.println("Comparing " + height + " and " + (prevHeight + 1) + ", " + uuid);
-        assertEquals(height, prevHeight + 1);
-      }
-      System.out.println("6" + ", " + uuid);
+      if (prevHeight == null) assertEquals(startHeight, height);
+      else assertEquals(height, prevHeight + 1);
       prevHeight = height;
-      System.out.println("Assigned prevHeight = " + height + ", " + uuid);
     }
     
     public void onDone(long chainHeight) {
       assertFalse(isDone);
       this.isDone = true;
-      System.out.println("Waiting a second for sleeping to finish" + ", " + uuid);
-      try { TimeUnit.MILLISECONDS.sleep(10); }
-      catch (InterruptedException e) {  throw new RuntimeException(e); } 
       if (prevHeight == null) {
         assertNull(prevCompleteHeight);
         assertEquals(chainHeight, startHeight);

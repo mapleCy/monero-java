@@ -2290,7 +2290,7 @@ public class MoneroWalletRpc extends MoneroWalletBase {
       if (topic.equals("json-minimal-chain_main")) {
         Map<String, Object> contentMap = JsonUtils.toMap(MoneroRpcConnection.MAPPER, content.substring(bodyIdx + 1)); // TODO: keep mapper in MoneroRpcConnection?
         long height = ((BigInteger) contentMap.get("first_height")).longValue();
-        onNewBlockMt(height);
+        for (MoneroWalletListenerI listener : getListeners()) listener.onNewBlock(height);
         
         // notify if balances change
         boolean balancesChanged = checkForChangedBalances();
@@ -2332,50 +2332,18 @@ public class MoneroWalletRpc extends MoneroWalletBase {
         if (topic.equals("json-full-money_received")) {
           tx.setIsIncoming(true);
           prevLockedTxHashes.add(tx.getHash()); // watch for unlock
-          onOutputReceivedMt(output);
+          for (MoneroWalletListenerI listener : getListeners()) listener.onOutputReceived(output);
         } else if (topic.equals("json-full-money_spent")) {
           tx.setIsIncoming(false);
           prevLockedTxHashes.add(tx.getHash()); // watch for unlock
-          onOutputSpentMt(output);
+          for (MoneroWalletListenerI listener : getListeners()) listener.onOutputSpent(output);
         } else if (topic.equals("json-full-unconfirmed_money_received")) {
           tx.setIsIncoming(true);
-          onOutputReceivedMt(output);
+          for (MoneroWalletListenerI listener : getListeners()) listener.onOutputReceived(output);
           checkForChangedBalances();
         } else {
           LOGGER.warning("Received unsupported notification: " + content);
         }
-      }
-    }
-    
-    private void onNewBlockMt(long height) {
-      for (MoneroWalletListenerI listener : getListeners()) {
-        new Thread(new Runnable() {
-          @Override public void run() { listener.onNewBlock(height); }
-        }).start();
-      }
-    }
-    
-    private void onOutputReceivedMt(MoneroOutputWallet output) {
-      for (MoneroWalletListenerI listener : getListeners()) {
-        new Thread(new Runnable() {
-          @Override public void run() { listener.onOutputReceived(output); }
-        }).start();
-      }
-    }
-    
-    private void onOutputSpentMt(MoneroOutputWallet output) {
-      for (MoneroWalletListenerI listener : getListeners()) {
-        new Thread(new Runnable() {
-          @Override public void run() { listener.onOutputSpent(output); }
-        }).start();
-      }
-    }
-    
-    private void onBalancesChangedMt(BigInteger newBalance, BigInteger newUnlockedBalance) {
-      for (MoneroWalletListenerI listener : getListeners()) {
-        new Thread(new Runnable() {
-          @Override public void run() { listener.onBalancesChanged(newBalance, newUnlockedBalance); }
-        }).start();
       }
     }
     
@@ -2385,7 +2353,7 @@ public class MoneroWalletRpc extends MoneroWalletBase {
       if (!balance.equals(prevBalance) || !unlockedBalance.equals(prevUnlockedBalance)) {
         prevBalance =  balance;
         prevUnlockedBalance = unlockedBalance;
-        onBalancesChangedMt(balance, unlockedBalance);
+        for (MoneroWalletListenerI listener : getListeners()) listener.onBalancesChanged(balance, unlockedBalance);
         return true;
       }
       return false;

@@ -4255,13 +4255,13 @@ public abstract class TestMoneroWalletCommon {
       
       // stop if tx confirms without notification
       if (wallet.getTx(tx.getHash()).isConfirmed()) {
-        try { TimeUnit.SECONDS.sleep(1); } catch (Exception e) { throw new RuntimeException(e); }
+        try { TimeUnit.SECONDS.sleep(1); } catch (Exception e) { throw new RuntimeException(e); } // allow a second to receive the notification
         if (listener.getOutputsSpent().isEmpty()) {
           errors.add("ERROR: tx is confirmed but no notifications were received");
           return errors;
         }
       }
-      try { TimeUnit.SECONDS.sleep(5); } catch (Exception e) { throw new RuntimeException(e); }
+      try { TimeUnit.SECONDS.sleep(3); } catch (Exception e) { throw new RuntimeException(e); }
     }
     try { daemon.stopMining(); } catch (Exception e) { }
     
@@ -4459,39 +4459,43 @@ public abstract class TestMoneroWalletCommon {
       public void onNewBlock(long height) {
         if (listener.testComplete) return;
         
-        try {
-          
-          // wait a moment for all notifications from last sync
-          TimeUnit.SECONDS.sleep(3);
-          
-          // first confirmation expected
-          if (listener.confirmedHeight == null && Boolean.TRUE.equals(listener.lastNotifiedOutput.getTx().isConfirmed())) { // only run by first thread after confirmation
-            listener.confirmedHeight = listener.lastNotifiedOutput.getTx().getHeight();
-            if (listener.confirmedHeight != submitHeight) System.out.println("WARNING: tx submitted on height " + submitHeight + " but confirmed on height " + listener.confirmedHeight);  // TODO monero-core: sometimes pool tx does not confirm for several blocks
+        new Thread(new Runnable() {
+          @Override public void run() {
+            try {
+              
+              // wait a moment for all notifications from last sync
+              TimeUnit.SECONDS.sleep(3);
+              
+              // first confirmation expected
+              if (listener.confirmedHeight == null && Boolean.TRUE.equals(listener.lastNotifiedOutput.getTx().isConfirmed())) { // only run by first thread after confirmation
+                listener.confirmedHeight = listener.lastNotifiedOutput.getTx().getHeight();
+                if (listener.confirmedHeight != submitHeight) System.out.println("WARNING: tx submitted on height " + submitHeight + " but confirmed on height " + listener.confirmedHeight);  // TODO monero-core: sometimes pool tx does not confirm for several blocks
+              }
+              
+              // skip tests if more recent block received
+              if (height < listener.lastOnNewBlockHeight) return;
+              
+              long blockchainHeight = height + 1; // notification is for new block's height (i.e. number of blocks before it), so blockchain height is block height + 1
+              Long unlockHeight = listener.confirmedHeight == null ? null : Math.max(listener.confirmedHeight + NUM_BLOCKS_LOCKED, expectedUnlockHeight);
+              
+              // output should be locked until max of expected unlock height and NUM_BLOCKS_LOCKED confirmations
+              if ((listener.confirmedHeight == null || blockchainHeight < unlockHeight) && !Boolean.TRUE.equals(listener.lastNotifiedOutput.isLocked())) throw new RuntimeException("Last notified output expected to be locked but isLocked=" + listener.lastNotifiedOutput.isLocked() + " at height " + height);
+              
+              // receives notification of unlocked tx when blockchain height reaches unlock height
+              if (listener.confirmedHeight != null && blockchainHeight >= unlockHeight) {
+                if (!Boolean.FALSE.equals(listener.lastNotifiedOutput.isLocked())) throw new RuntimeException("Last notified output expected to be unlocked but isLocked=" + listener.lastNotifiedOutput.isLocked());
+                if (!sendAmount.equals(listener.lastOnBalancesChangedBalance) || !sendAmount.equals(listener.lastOnBalancesChangedUnlockedBalance)) throw new RuntimeException("Expected last notified onBalancesChanged() to be with unlocked send amount");
+                listener.unlockedSeen = true;
+                listener.testComplete = true;
+              }
+            } catch (Exception e) {
+              System.out.println("Exception!");
+              e.printStackTrace();
+              listener.testComplete = true;
+              listener.testError = e.getMessage();
+            }
           }
-          
-          // skip tests if more recent block received
-          if (height < listener.lastOnNewBlockHeight) return;
-          
-          long blockchainHeight = height + 1; // notification is for new block's height (i.e. number of blocks before it), so blockchain height is block height + 1
-          Long unlockHeight = listener.confirmedHeight == null ? null : Math.max(listener.confirmedHeight + NUM_BLOCKS_LOCKED, expectedUnlockHeight);
-          
-          // output should be locked until max of expected unlock height and NUM_BLOCKS_LOCKED confirmations
-          if ((listener.confirmedHeight == null || blockchainHeight < unlockHeight) && !Boolean.TRUE.equals(listener.lastNotifiedOutput.isLocked())) throw new RuntimeException("Last notified output expected to be locked but isLocked=" + listener.lastNotifiedOutput.isLocked() + " at height " + height);
-          
-          // receives notification of unlocked tx when blockchain height reaches unlock height
-          if (listener.confirmedHeight != null && blockchainHeight >= unlockHeight) {
-            if (!Boolean.FALSE.equals(listener.lastNotifiedOutput.isLocked())) throw new RuntimeException("Last notified output expected to be unlocked but isLocked=" + listener.lastNotifiedOutput.isLocked());
-            if (!sendAmount.equals(listener.lastOnBalancesChangedBalance) || !sendAmount.equals(listener.lastOnBalancesChangedUnlockedBalance)) throw new RuntimeException("Expected last notified onBalancesChanged() to be with unlocked send amount");
-            listener.unlockedSeen = true;
-            listener.testComplete = true;
-          }
-        } catch (Exception e) {
-          System.out.println("Exception!");
-          e.printStackTrace();
-          listener.testComplete = true;
-          listener.testError = e.getMessage();
-        }
+        }).start();
       }
     });
     
