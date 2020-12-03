@@ -32,9 +32,12 @@ import monero.wallet.model.MoneroTxQuery;
 import monero.wallet.model.MoneroTxWallet;
 import monero.wallet.model.MoneroWalletConfig;
 import monero.wallet.model.MoneroWalletListener;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import utils.StartMining;
 import utils.TestUtils;
 import utils.WalletEqualityUtils;
@@ -43,6 +46,7 @@ import utils.WalletSyncPrinter;
 /**
  * Tests specific to the JNI wallet.
  */
+@TestInstance(Lifecycle.PER_CLASS)  // so @BeforeAll and @AfterAll can be used on non-static functions
 public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   
   protected MoneroWalletJni wallet;
@@ -53,8 +57,13 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   }
 
   @BeforeAll
-  public static void beforeClass() throws Exception {
+  public void beforeAll() {
     //Assume.assumeTrue(false); // ignore entire class
+  }
+  
+  @AfterAll
+  public void afterAll() {
+    wallet.close();
   }
 
   @Override

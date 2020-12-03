@@ -66,6 +66,8 @@ import monero.wallet.model.MoneroWalletListener;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import utils.Pair;
 import utils.StartMining;
 import utils.TestUtils;
@@ -74,6 +76,7 @@ import utils.WalletEqualityUtils;
 /**
  * Runs common tests that every Monero wallet implementation should support.
  */
+@TestInstance(Lifecycle.PER_CLASS)  // so @BeforeAll and @AfterAll can be used on non-static functions
 public abstract class TestMoneroWalletCommon {
   
   // test constants
@@ -148,7 +151,7 @@ public abstract class TestMoneroWalletCommon {
   protected abstract List<String> getMnemonicLanguages();
 
   @BeforeAll
-  public static void beforeAll() throws Exception {
+  public void beforeAll() {
     TestUtils.TX_POOL_WALLET_TRACKER.reset(); // all wallets need to wait for txs to confirm to reliably sync
   }
   
@@ -4221,7 +4224,7 @@ public abstract class TestMoneroWalletCommon {
     if (sweepOutput) {
       List<MoneroOutputWallet> outputs = wallet.getOutputs(new MoneroOutputQuery().setIsSpent(false).setIsLocked(false).setAccountIndex(0).setMinAmount(TestUtils.MAX_FEE.multiply(new BigInteger("5"))));
       if (outputs.isEmpty()) {
-        errors.add("ERROR: No outputs available to sweep");
+        errors.add("ERROR: No outputs available to sweep from account 0");
         return errors;
       }
       tx = wallet.sweepOutput(new MoneroTxConfig()
@@ -4280,15 +4283,8 @@ public abstract class TestMoneroWalletCommon {
     // must receive outputs with known subaddresses and amounts
     for (int destinationAccount : destinationAccounts) {
       if (!hasOutput(listener.getOutputsReceived(), tx.getHash(), destinationAccount, 0, sweepOutput ? null : TestUtils.MAX_FEE)) {
-        System.out.println("We don't have the expected output to account " + destinationAccount + "!");
-        System.out.println("Whole TX");
-        System.out.println(wallet.getTx(tx.getHash()));
-        System.out.println("Received outputs TX");
-        System.out.println(listener.getOutputsReceived());
         errors.add("ERROR: missing expected received output to subaddress [" + destinationAccount + ", 0] of amount " + TestUtils.MAX_FEE);
         return errors;
-      } else {
-        System.out.println("Received expected output to subaddress [" + destinationAccount + ", 0] of amount " + TestUtils.MAX_FEE);
       }
     }
     

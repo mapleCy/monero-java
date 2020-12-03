@@ -28,11 +28,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import utils.TestUtils;
 
 /**
  * Tests monero-wallet-rpc non-relaying calls.
  */
+@TestInstance(Lifecycle.PER_CLASS)  // so @BeforeAll and @AfterAll can be used on non-static functions
 public class TestMoneroWalletRpc extends TestMoneroWalletCommon {
   
   protected MoneroWalletRpc wallet;
@@ -43,12 +46,12 @@ public class TestMoneroWalletRpc extends TestMoneroWalletCommon {
   }
 
   @BeforeAll
-  public static void beforeAll() throws Exception {
+  public void beforeAll() {
     
   }
   
   @AfterAll
-  public static void afterAll() throws InterruptedException {
+  public void afterAll() throws InterruptedException {
     for (MoneroWalletRpc walletRpc : TestUtils.WALLET_PORT_OFFSETS.keySet()) {
       System.err.println("WARNING: Wallet RPC process was not stopped after all tests, stopping");
       TestUtils.stopWalletRpcProcess(walletRpc);

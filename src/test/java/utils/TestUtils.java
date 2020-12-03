@@ -207,15 +207,6 @@ public class TestUtils {
         walletJni.sync(new WalletSyncPrinter());
         walletJni.startSyncing();
       }
-      
-      // Save and close the JNI wallet when the runtime is shutting down in order
-      // to preserve local wallet data (e.g. destination addresses and amounts).
-      // This is not necessary in the rpc wallet which saves automatically.
-      Runtime.getRuntime().addShutdownHook(new Thread() {
-        public void run() {
-          walletJni.close(true);
-        }
-      });
     }
     
     // ensure we're testing the right wallet
