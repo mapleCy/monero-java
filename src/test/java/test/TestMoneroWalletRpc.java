@@ -137,9 +137,7 @@ public class TestMoneroWalletRpc extends TestMoneroWalletCommon {
     MoneroWalletRpc walletRpc = (MoneroWalletRpc) wallet;
     walletRpc.close(save);
     try {
-      System.out.println("stopping wallet process...");
       TestUtils.stopWalletRpcProcess(walletRpc);
-      System.out.println("done stopping wallet process!");
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
