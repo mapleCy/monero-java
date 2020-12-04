@@ -224,7 +224,7 @@ public class TestMoneroWalletRpc extends TestMoneroWalletCommon {
     // create test wallets
     List<String> mnemonics = new ArrayList<String>();
     for (String name : names) {
-      wallet = createWallet(new MoneroWalletConfig().setPath(name));
+      MoneroWalletRpc wallet = createWallet(new MoneroWalletConfig().setPath(name));
       mnemonics.add(wallet.getMnemonic());
       closeWallet(wallet, true);
     }
