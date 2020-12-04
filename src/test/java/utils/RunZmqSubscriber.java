@@ -1,24 +1,18 @@
 package utils;
 
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZThread;
 
+/**
+ * Subscribes to ZMQ publications.
+ */
 public class RunZmqSubscriber implements ZThread.IDetachedRunnable {
 
   private String connection;
-  private ZMQ.Context context;
+  private ZContext context;
   private ZMQ.Socket subscriber;
-  
-//  public static void main(String[] args){
-//    ZMQ.Context context=ZMQ.context(1);
-//    ZMQ.Socket subscriber=context.socket(ZMQ.SUB);
-//    subscriber.connect("tcp://localhost:5563");
-//    subscriber.subscribe("bhs_queue".getBytes());
-//    while (true) {
-//      String msg = new String(subscriber.recv(0));
-//      System.out.println("Received notification!: " + msg);
-//    }
-//  }
 
   public static void main(String... args) {
     new RunZmqSubscriber("tcp://127.0.0.1:58083").run(null);
@@ -32,7 +26,7 @@ public class RunZmqSubscriber implements ZThread.IDetachedRunnable {
   public void run(Object[] args) {
     open();
 
-    ZMQ.Poller poller = context.poller(1);
+    ZMQ.Poller poller = context.createPoller(1);
     poller.register(subscriber, ZMQ.Poller.POLLIN);
     while (!Thread.currentThread().isInterrupted()) {
       poller.poll();
@@ -48,8 +42,8 @@ public class RunZmqSubscriber implements ZThread.IDetachedRunnable {
   }
 
   private void open() {
-    context = ZMQ.context(1);
-    subscriber = context.socket(ZMQ.SUB);
+    context = new ZContext();
+    subscriber = context.createSocket(SocketType.SUB);
 
     subscriber.connect(connection);
     subscriber.subscribe("json-full".getBytes());
