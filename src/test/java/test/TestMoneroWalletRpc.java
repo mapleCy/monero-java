@@ -65,6 +65,7 @@ public class TestMoneroWalletRpc extends TestMoneroWalletCommon {
   
   @AfterEach
   public void afterEach(TestInfo testInfo) throws InterruptedException {
+    super.afterEach(testInfo);
     for (MoneroWalletRpc walletRpc : TestUtils.WALLET_PORT_OFFSETS.keySet()) {
       System.err.println("WARNING: Wallet RPC process was not stopped after test " + testInfo.getDisplayName() + ", stopping");
       TestUtils.stopWalletRpcProcess(walletRpc);

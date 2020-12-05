@@ -63,9 +63,11 @@ import monero.wallet.model.MoneroTxSet;
 import monero.wallet.model.MoneroTxWallet;
 import monero.wallet.model.MoneroWalletConfig;
 import monero.wallet.model.MoneroWalletListener;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import utils.Pair;
@@ -93,7 +95,6 @@ public abstract class TestMoneroWalletCommon {
   // instance variables
   protected MoneroWallet wallet;        // wallet instance to test
   protected MoneroDaemonRpc daemon;     // daemon instance to test
-  private List<MoneroTxWallet> txCache; // local tx cache
   
   public TestMoneroWalletCommon() {
     wallet = getTestWallet();
@@ -153,6 +154,11 @@ public abstract class TestMoneroWalletCommon {
   @BeforeAll
   public void beforeAll() {
     TestUtils.TX_POOL_WALLET_TRACKER.reset(); // all wallets need to wait for txs to confirm to reliably sync
+  }
+  
+  @AfterEach
+  public void afterEach(TestInfo testInfo) throws InterruptedException {
+
   }
   
   // ------------------------------ BEGIN TESTS -------------------------------
@@ -811,11 +817,9 @@ public abstract class TestMoneroWalletCommon {
   public void testGetTxsWallet() {
     assumeTrue(TEST_NON_RELAYS);
     boolean nonDefaultIncoming = false;
-    List<MoneroTxWallet> txs1 = getCachedTxs();
-    List<MoneroTxWallet> txs2 = getAndTestTxs(wallet, null, null, true);
-    assertEquals(txs2.size(), txs1.size());
-    assertFalse(txs1.isEmpty(), "Wallet has no txs to test");
-    assertEquals(TestUtils.FIRST_RECEIVE_HEIGHT, (long) txs1.get(0).getHeight(), "First tx's restore height must match the restore height in TestUtils");
+    List<MoneroTxWallet> txs = getAndTestTxs(wallet, null, null, true);
+    assertFalse(txs.isEmpty(), "Wallet has no txs to test");
+    assertEquals(TestUtils.FIRST_RECEIVE_HEIGHT, (long) txs.get(0).getHeight(), "First tx's restore height must match the restore height in TestUtils");
     
     // build test context
     TxContext ctx = new TxContext();
@@ -823,33 +827,31 @@ public abstract class TestMoneroWalletCommon {
     
     // test each transaction
     Map<Long, MoneroBlock> blockPerHeight = new HashMap<Long, MoneroBlock>();
-    for (int i = 0; i < txs1.size(); i++) {
-      testTxWallet(txs1.get(i), ctx);
-      testTxWallet(txs2.get(i), ctx);
-      assertEquals(txs1.get(i), txs2.get(i));
+    for (int i = 0; i < txs.size(); i++) {
+      testTxWallet(txs.get(i), ctx);
       
       // test merging equivalent txs
-      MoneroTxWallet copy1 = txs1.get(i).copy();
-      MoneroTxWallet copy2 = txs2.get(i).copy();
-      if (copy1.isConfirmed()) copy1.setBlock(txs1.get(i).getBlock().copy().setTxs(Arrays.asList(copy1)));
-      if (copy2.isConfirmed()) copy2.setBlock(txs2.get(i).getBlock().copy().setTxs(Arrays.asList(copy2)));
+      MoneroTxWallet copy1 = txs.get(i).copy();
+      MoneroTxWallet copy2 = txs.get(i).copy();
+      if (copy1.isConfirmed()) copy1.setBlock(txs.get(i).getBlock().copy().setTxs(Arrays.asList(copy1)));
+      if (copy2.isConfirmed()) copy2.setBlock(txs.get(i).getBlock().copy().setTxs(Arrays.asList(copy2)));
       MoneroTxWallet merged = copy1.merge(copy2);
       testTxWallet(merged, ctx);
       
       // find non-default incoming
-      if (txs1.get(i).getIncomingTransfers() != null) { // TODO: txs1.get(i).isIncoming()
-        for (MoneroIncomingTransfer transfer : txs1.get(i).getIncomingTransfers()) {
+      if (txs.get(i).getIncomingTransfers() != null) { // TODO: txs1.get(i).isIncoming()
+        for (MoneroIncomingTransfer transfer : txs.get(i).getIncomingTransfers()) {
           if (transfer.getAccountIndex() != 0 && transfer.getSubaddressIndex() != 0) nonDefaultIncoming = true;
         }
       }
       
       // ensure unique block reference per height
-      if (txs2.get(i).isConfirmed()) {
-        MoneroBlock block = blockPerHeight.get(txs2.get(i).getHeight());
-        if (block == null) blockPerHeight.put(txs2.get(i).getHeight(), txs2.get(i).getBlock());
+      if (txs.get(i).isConfirmed()) {
+        MoneroBlock block = blockPerHeight.get(txs.get(i).getHeight());
+        if (block == null) blockPerHeight.put(txs.get(i).getHeight(), txs.get(i).getBlock());
         else {
-          assertEquals(block, txs2.get(i).getBlock());
-          assertTrue(block == txs2.get(i).getBlock(), "Block references for same height must be same");
+          assertEquals(block, txs.get(i).getBlock());
+          assertTrue(block == txs.get(i).getBlock(), "Block references for same height must be same");
         }
       }
     }
@@ -1816,7 +1818,7 @@ public abstract class TestMoneroWalletCommon {
     
     // test check with different address
     String differentAddress = null;
-    for (MoneroTxWallet aTx : getCachedTxs()) {
+    for (MoneroTxWallet aTx : wallet.getTxs()) {
       if (aTx.getOutgoingTransfer() == null || aTx.getOutgoingTransfer().getDestinations() == null) continue;
       for (MoneroDestination aDestination : aTx.getOutgoingTransfer().getDestinations()) {
         if (!aDestination.getAddress().equals(destination.getAddress())) {
@@ -2111,7 +2113,7 @@ public abstract class TestMoneroWalletCommon {
     
     // set tx notes
     String uuid = UUID.randomUUID().toString();
-    List<MoneroTxWallet> txs = getCachedTxs();
+    List<MoneroTxWallet> txs = wallet.getTxs();
     assertTrue(txs.size() >= 3, "Test requires 3 or more wallet transactions; run send tests");
     List<String> txHashes = new ArrayList<String>();
     List<String> txNotes = new ArrayList<String>();
@@ -4580,19 +4582,15 @@ public abstract class TestMoneroWalletCommon {
       try { TimeUnit.MILLISECONDS.sleep(1000); } catch (InterruptedException e) {  throw new RuntimeException(e); } // zmq notifications received within 1 second
       assertFalse(myListener.getOutputsReceived().isEmpty());
     } finally {
-      try { daemon.stopMining(); } catch (Exception e) { }
+      System.out.println("Closing wallet!");
       closeWallet(receiver);
+      try { TimeUnit.MILLISECONDS.sleep(10000); } catch (InterruptedException e) {  throw new RuntimeException(e); } // zmq notifications received within 1 second
+      System.out.println("Stopping mining wallet!");
+      try { daemon.stopMining(); } catch (Exception e) { }
     }
   }
   
   // --------------------------------- HELPERS --------------------------------
-  
-  private List<MoneroTxWallet> getCachedTxs() {
-    if (txCache != null) return txCache;
-    txCache = wallet.getTxs();
-    testGetTxsStructure(txCache);
-    return txCache;
-  }
   
   /**
    * Fetches and tests transactions according to the given query.
@@ -5233,7 +5231,6 @@ public abstract class TestMoneroWalletCommon {
    * Tests the integrity of the full structure in the given txs from the block down
    * to transfers / destinations.
    */
-  private void testGetTxsStructure(List<MoneroTxWallet> txs) { testGetTxsStructure(txs, null); }
   private void testGetTxsStructure(List<MoneroTxWallet> txs, MoneroTxQuery query) {
     if (query == null) query = new MoneroTxQuery();
     
