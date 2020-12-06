@@ -24,7 +24,6 @@ import monero.wallet.model.MoneroWalletConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -51,24 +50,22 @@ public class TestMoneroWalletRpc extends TestMoneroWalletCommon {
   }
   
   @AfterAll
-  public void afterAll() throws InterruptedException {
+  public void afterAll() {
+    super.afterAll();
     for (MoneroWalletRpc walletRpc : TestUtils.WALLET_PORT_OFFSETS.keySet()) {
       System.err.println("WARNING: Wallet RPC process was not stopped after all tests, stopping");
-      TestUtils.stopWalletRpcProcess(walletRpc);
+      try { TestUtils.stopWalletRpcProcess(walletRpc); }
+      catch (Exception e) { throw new RuntimeException(e); }
     }
   }
   
-  @BeforeEach
-  public void beforeEach(TestInfo testInfo) throws InterruptedException {
-    
-  }
-  
   @AfterEach
-  public void afterEach(TestInfo testInfo) throws InterruptedException {
+  public void afterEach(TestInfo testInfo) {
     super.afterEach(testInfo);
     for (MoneroWalletRpc walletRpc : TestUtils.WALLET_PORT_OFFSETS.keySet()) {
       System.err.println("WARNING: Wallet RPC process was not stopped after test " + testInfo.getDisplayName() + ", stopping");
-      TestUtils.stopWalletRpcProcess(walletRpc);
+      try { TestUtils.stopWalletRpcProcess(walletRpc); }
+      catch (Exception e) { throw new RuntimeException(e); }
     }
   }
   
@@ -185,7 +182,7 @@ public class TestMoneroWalletRpc extends TestMoneroWalletCommon {
   
   // Can create a wallet from a mnemonic phrase
   @Test
-  public void testCreateWalletFromMnemonicRpc() throws InterruptedException {
+  public void testCreateWalletFromMnemonicRpc() {
     assumeTrue(TEST_NON_RELAYS);
       
     // create wallet with mnemonic and defaults

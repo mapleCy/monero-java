@@ -63,8 +63,10 @@ import monero.wallet.model.MoneroTxSet;
 import monero.wallet.model.MoneroTxWallet;
 import monero.wallet.model.MoneroWalletConfig;
 import monero.wallet.model.MoneroWalletListener;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -156,11 +158,26 @@ public abstract class TestMoneroWalletCommon {
     TestUtils.TX_POOL_WALLET_TRACKER.reset(); // all wallets need to wait for txs to confirm to reliably sync
   }
   
-  @AfterEach
-  public void afterEach(TestInfo testInfo) throws InterruptedException {
-
+  @AfterAll
+  public void afterAll() {
+    
+    // try to stop minining
+    try { daemon.stopMining(); }
+    catch (MoneroError e) { }
+    
+    // close wallet
+    wallet.close();
   }
   
+  @BeforeEach
+  public void beforeEach(TestInfo testInfo) {
+    //System.out.println("Before test " + testInfo.getDisplayName());
+  }
+  
+  @AfterEach
+  public void afterEach(TestInfo testInfo) {
+    //System.out.println("After test " + testInfo.getDisplayName());
+  }
   // ------------------------------ BEGIN TESTS -------------------------------
   
   // Can create a random wallet
@@ -1728,7 +1745,13 @@ public abstract class TestMoneroWalletCommon {
     // wallet balance is sum of all unspent outputs
     BigInteger walletSum = BigInteger.valueOf(0);
     for (MoneroOutputWallet output : wallet.getOutputs(new MoneroOutputQuery().setIsSpent(false))) walletSum = walletSum.add(output.getAmount());
-    if (!walletBalance.equals(walletSum)) assertTrue(hasUnconfirmedTx, "Wallet balance must equal sum of unspent outputs if no unconfirmed txs");
+    if (!walletBalance.equals(walletSum)) {
+      
+      // txs may have changed in between calls so retry test
+      walletSum = BigInteger.valueOf(0);
+      for (MoneroOutputWallet output : wallet.getOutputs(new MoneroOutputQuery().setIsSpent(false))) walletSum = walletSum.add(output.getAmount());
+      if (!walletBalance.equals(walletSum)) assertTrue(hasUnconfirmedTx, "Wallet balance must equal sum of unspent outputs if no unconfirmed txs");
+    }
     
     // account balances are sum of their unspent outputs
     for (MoneroAccount account : accounts) {

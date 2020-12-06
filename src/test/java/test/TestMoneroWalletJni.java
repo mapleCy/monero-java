@@ -32,8 +32,6 @@ import monero.wallet.model.MoneroTxQuery;
 import monero.wallet.model.MoneroTxWallet;
 import monero.wallet.model.MoneroWalletConfig;
 import monero.wallet.model.MoneroWalletListener;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -54,16 +52,6 @@ public class TestMoneroWalletJni extends TestMoneroWalletCommon {
   public TestMoneroWalletJni() {
     super();
     this.wallet = (MoneroWalletJni) super.wallet;
-  }
-
-  @BeforeAll
-  public void beforeAll() {
-    //Assume.assumeTrue(false); // ignore entire class
-  }
-  
-  @AfterAll
-  public void afterAll() {
-    wallet.close();
   }
 
   @Override
