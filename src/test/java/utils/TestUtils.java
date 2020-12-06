@@ -49,12 +49,12 @@ public class TestUtils {
   public static final int WALLET_RPC_PORT_START = 38084; // test wallet executables will bind to consecutive ports after these
   public static final int WALLET_RPC_ZMQ_PORT_START = 58083;
   public static final int WALLET_RPC_ZMQ_BIND_PORT_START = 48083;  // TODO: zmq bind port necessary?
+  public static final String WALLET_RPC_USERNAME = "rpc_user";
+  public static final String WALLET_RPC_PASSWORD = "abc123";
   public static final String WALLET_RPC_ZMQ_DOMAIN = "127.0.0.1";
   public static final String WALLET_RPC_DOMAIN = "localhost";
   public static final String WALLET_RPC_URI = "http://" + WALLET_RPC_DOMAIN + ":" + WALLET_RPC_PORT_START;
   public static final String WALLET_RPC_ZMQ_URI = "tcp://" + WALLET_RPC_ZMQ_DOMAIN + ":" + WALLET_RPC_ZMQ_PORT_START;
-  public static final String WALLET_RPC_USERNAME = "rpc_user";
-  public static final String WALLET_RPC_PASSWORD = "abc123";
   public static final String WALLET_RPC_LOCAL_EXEC_PATH = "/Applications/monero-x86_64-apple-darwin11-v0.17.1.5-rct-zmq/monero-wallet-rpc"; // TODO: test error messages with invalid params, TODO: dummy path for public repo
   public static final String WALLET_RPC_LOCAL_WALLET_DIR = "/Applications/monero-x86_64-apple-darwin11-v0.17.1.5-rct-zmq";  // defaults to exec path's parent directory
   public static final String WALLET_RPC_ACCESS_CONTROL_ORIGINS = "http://localhost:8080"; // cors access from web browser
