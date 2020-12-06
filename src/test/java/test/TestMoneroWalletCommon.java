@@ -172,6 +172,10 @@ public abstract class TestMoneroWalletCommon {
   @BeforeEach
   public void beforeEach(TestInfo testInfo) {
     //System.out.println("Before test " + testInfo.getDisplayName());
+    
+    // stop mining
+    MoneroMiningStatus status = daemon.getMiningStatus();
+    if (status.isActive()) wallet.stopMining();
   }
   
   @AfterEach
