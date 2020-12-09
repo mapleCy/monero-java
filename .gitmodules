@@ -1,4 +1,4 @@
 [submodule "external/monero-cpp"]
 	path = external/monero-cpp
 	url = https://github.com/mapleCy/monero-cpp
-	branch =2ce2a77dd3e34ddfc957151ccb3a10c91eee6245
+	branch =master
